@@ -1,0 +1,10 @@
+body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.card-produto { transition: all 0.2s ease-in-out; }
+.card-produto:active { transform: scale(0.98); }
+.loader { border-top-color: #dc2626; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+@keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.fade-in { animation: fadeIn 0.4s ease-out forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
