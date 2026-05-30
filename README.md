@@ -37,7 +37,3 @@ O projeto foi construído focando em alta performance e custo zero de infraestru
 - **Deploy & CI/CD:** Hospedado na CDN global do **Netlify**, com integração contínua diretamente deste repositório GitHub.
 
 
-
-1. Clone o repositório:
-   ```bash
-   git clone [https://github.com/SEU-USUARIO/amei-salgados-app.git](https://github.com/SEU-USUARIO/amei-salgados-app.git)
