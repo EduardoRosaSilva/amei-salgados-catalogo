@@ -163,6 +163,7 @@ async function carregarCardapio() {
                 const categoria = colunas[2] ? colunas[2].trim().toUpperCase() : '';
                 const statusUnidade = colunas[3] ? colunas[3].trim().toUpperCase() : '';
                 const img = colunas[4] ? colunas[4].trim() : ''; 
+                const observacao = colunas[5] ? colunas[5].trim() : '';
                 
                 let isDisponivel = (statusUnidade === 'DISPONIVEL' || statusUnidade === 'TRUE');
 
@@ -201,7 +202,7 @@ async function carregarCardapio() {
                     `;
                 }
                 else {
-                    const html = gerarCardHTML(nome, preco, categoria, img || IMG_PADRAO_SALGADO, isDisponivel, nomeSafe, catSafe);
+                    const html = gerarCardHTML(nome, preco, categoria, img || IMG_PADRAO_SALGADO, isDisponivel, nomeSafe, catSafe, observacao);
                     if (categoria.includes('PROMOÇÃO') || categoria.includes('PROMOCAO')) { 
                         document.getElementById('secao-promocoes').classList.remove('hidden'); 
                         promocoesHTML += html; 
@@ -231,9 +232,12 @@ async function carregarCardapio() {
     }
 }
 
-function gerarCardHTML(nome, preco, categoria, imgUrl, isDisponivel, nomeSafe, catSafe) {
+function gerarCardHTML(nome, preco, categoria, imgUrl, isDisponivel, nomeSafe, catSafe, observacao = '') {
     const opacidade = isDisponivel ? "" : "opacity-60 grayscale-[50%]";
     const selo = isDisponivel ? "" : `<div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md">ESGOTADO</div>`;
+    
+    // Cria o HTML da observação se ela existir
+    const obsHTML = observacao ? `<p class="text-[11px] text-slate-500 mt-1 leading-tight line-clamp-2">${observacao}</p>` : '';
     
     const botoes = isDisponivel ? `
         <div class="flex items-center bg-slate-100 rounded-lg">
@@ -243,7 +247,7 @@ function gerarCardHTML(nome, preco, categoria, imgUrl, isDisponivel, nomeSafe, c
         </div>
     ` : `<span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded">Indisponível</span>`;
 
-    return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 flex overflow-hidden relative ${opacidade} card-produto">${selo}<div class="w-24 h-24 md:w-32 md:h-32 flex-shrink-0 bg-slate-100"><img src="${imgUrl}" class="w-full h-full object-cover" onerror="this.src='${IMG_PADRAO_SALGADO}'"></div><div class="p-3 md:p-4 flex flex-col justify-between w-full"><div><h4 class="font-bold text-sm md:text-base text-slate-800">${nome}</h4></div><div class="flex justify-between items-center"><span class="font-bold text-sm md:text-base text-red-600">R$ ${preco.toFixed(2).replace('.', ',')}</span>${botoes}</div></div></div>`;
+    return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 flex overflow-hidden relative ${opacidade} card-produto">${selo}<div class="w-24 h-24 md:w-32 md:h-32 flex-shrink-0 bg-slate-100"><img src="${imgUrl}" class="w-full h-full object-cover" onerror="this.src='${IMG_PADRAO_SALGADO}'"></div><div class="p-3 md:p-4 flex flex-col justify-between w-full"><div><h4 class="font-bold text-sm md:text-base text-slate-800">${nome}</h4>${obsHTML}</div><div class="flex justify-between items-center mt-2"><span class="font-bold text-sm md:text-base text-red-600">R$ ${preco.toFixed(2).replace('.', ',')}</span>${botoes}</div></div></div>`;
 }
 
 function abrirModalMisto(nomeCodificado, preco) { 
