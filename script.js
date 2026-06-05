@@ -10,6 +10,9 @@ let selecaoMisto = {};
 let centoMistoAtualNome = '';
 let centoMistoAtualPreco = 0;
 
+// Variável global para receber a ordem da planilha
+let statusForcado = 'NORMAL'; 
+
 function abrirModalInfo(id) { document.getElementById(id).classList.remove('hidden'); }
 function fecharModalInfo(id) { document.getElementById(id).classList.add('hidden'); }
 
@@ -113,6 +116,11 @@ function checarHorarioFuncionamento() {
         }
     }
 
+    // --- LÓGICA DE INTERVENÇÃO MANUAL DA PLANILHA ---
+    if (statusForcado === 'ABERTO') aberto = true;
+    if (statusForcado === 'FECHADO') aberto = false;
+    // ------------------------------------------------
+
     const spanStatus = document.getElementById('status-loja');
     if (aberto) {
         spanStatus.innerText = "ABERTO PARA PEDIDOS";
@@ -158,13 +166,22 @@ async function carregarCardapio() {
                 const precoLimpo = precoOriginal.replace(/[^0-9,.-]/g, ''); 
                 const preco = parseFloat(precoLimpo.replace(',', '.')); 
                 
-                if (!nome || isNaN(preco)) return;
+                if (!nome) return;
 
                 const categoria = colunas[2] ? colunas[2].trim().toUpperCase() : '';
                 const statusUnidade = colunas[3] ? colunas[3].trim().toUpperCase() : '';
                 const img = colunas[4] ? colunas[4].trim() : ''; 
                 const observacao = colunas[5] ? colunas[5].trim() : '';
                 
+                // --- NOVA LÓGICA DE CONTROLE DA LOJA ---
+                if (categoria === 'CONFIGURACAO' || categoria === 'CONFIGURAÇÃO') {
+                    statusForcado = statusUnidade; // Recebe ABERTO, FECHADO ou NORMAL da Katia
+                    return; // Interrompe aqui para não desenhar o card na tela
+                }
+                // ---------------------------------------
+
+                if (isNaN(preco)) return;
+
                 let isDisponivel = (statusUnidade === 'DISPONIVEL' || statusUnidade === 'TRUE');
 
                 if (isDisponivel && (categoria.includes('COMBO') || categoria.includes('CENTO') || categoria.includes('PROMO'))) {
@@ -225,6 +242,9 @@ async function carregarCardapio() {
         document.getElementById('container-bebidas').innerHTML = bebidasHTML;
         document.getElementById('loading-spinner').classList.add('hidden');
         document.getElementById('conteudo-cardapio').classList.remove('hidden');
+
+        // Atualiza a etiqueta imediatamente com a ordem que veio da planilha
+        checarHorarioFuncionamento();
 
     } catch (erro) {
         console.error("Erro fatal:", erro);
