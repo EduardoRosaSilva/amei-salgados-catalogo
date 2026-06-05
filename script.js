@@ -1,8 +1,7 @@
 const URL_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS0kfNS_Q5ZidRXjo-oUxUwhTUTmH1o-mGMPUh1v-5OYV_mJ8lYyfUozpSm25txuCUYpCezmowgkB2Y/pub?gid=1596392114&single=true&output=tsv"; 
 
-// NÚMERO DA LANCHONETE (CLIENTE) PARA RECEBER PEDIDOS
 const telefoneLanchonete = "5534988979594"; 
-const IMG_PADRAO_SALGADO = "static/salgados.jpg";
+const IMG_PADRAO_SALGADO = "static/Salgados.jpg"; 
 
 let carrinho = [];
 let saboresMisto = []; 
@@ -10,36 +9,84 @@ let selecaoMisto = {};
 let centoMistoAtualNome = '';
 let centoMistoAtualPreco = 0;
 
-// Variável global para receber a ordem da planilha
 let statusForcado = 'NORMAL'; 
+let isLojaAberta = false; 
 
 function abrirModalInfo(id) { document.getElementById(id).classList.remove('hidden'); }
 function fecharModalInfo(id) { document.getElementById(id).classList.add('hidden'); }
 
-// --- SISTEMA INTELIGENTE DE HORÁRIOS E DATAS ---
+// ==========================================
+// 🌟 SISTEMA PREMIUM DE NOTIFICAÇÕES (TOAST)
+// ==========================================
+function mostrarToast(mensagem, tipo = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed top-5 right-5 z-[9999] flex flex-col gap-3 max-w-sm w-full px-4 sm:px-0 pointer-events-none';
+        document.body.appendChild(container);
+    }
 
-// Bloqueia domingos no calendário
+    const toast = document.createElement('div');
+    
+    let bgClass = 'bg-slate-800 text-white';
+    let icon = 'fas fa-info-circle';
+    
+    if (tipo === 'success') {
+        bgClass = 'bg-green-600 text-white';
+        icon = 'fas fa-check-circle';
+    } else if (tipo === 'danger' || tipo === 'error') {
+        bgClass = 'bg-red-600 text-white';
+        icon = 'fas fa-exclamation-circle';
+    } else if (tipo === 'warning') {
+        bgClass = 'bg-amber-500 text-slate-900';
+        icon = 'fas fa-exclamation-triangle';
+    }
+
+    toast.className = `${bgClass} p-4 rounded-xl shadow-2xl flex items-center gap-3 transform translate-x-full transition-all duration-300 ease-out font-semibold text-xs md:text-sm border border-black/10 pointer-events-auto`;
+    toast.innerHTML = `<i class="${icon} text-base flex-shrink-0"></i><div class="flex-grow">${mensagem}</div>`;
+
+    container.appendChild(toast);
+
+    // Animação de entrada (Slide In)
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+        toast.classList.add('translate-x-0');
+    }, 50);
+
+    // Animação de saída (Slide Out) e remoção
+    setTimeout(() => {
+        toast.classList.remove('translate-x-0');
+        toast.classList.add('translate-x-full');
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 4500);
+}
+
+// ==========================================
+// SISTEMA INTELIGENTE DE HORÁRIOS E DATAS
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('dia-pedido');
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    // Define o mínimo como o dia atual (formato YYYY-MM-DD ajustado para fuso local)
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const dayNum = String(today.getDate()).padStart(2, '0');
     dateInput.min = `${year}-${month}-${dayNum}`;
     
     dateInput.addEventListener('input', function(e) {
-        const dataSelecionada = this.value; // Formato "YYYY-MM-DD"
+        const dataSelecionada = this.value; 
         if(!dataSelecionada) return;
 
         const dayOfWeek = new Date(dataSelecionada + 'T00:00:00').getDay();
 
-        // Regra: Domingos
         if (dayOfWeek === 0) { 
-            alert('Estamos fechados aos domingos. Por favor, escolha outra data.');
+            mostrarToast("Aos domingos nós descansamos para recarregar as energias! 😴 Que tal escolher um outro dia da semana para saborear nossos salgados?", "warning");
             this.value = '';
             limparSelectHorarios();
             return;
@@ -55,7 +102,6 @@ function limparSelectHorarios() {
     selectHorario.disabled = true;
 }
 
-// Atualiza a lista suspensa de horários dependendo do dia escolhido
 function atualizarHorariosDisponiveis() {
     const dateInput = document.getElementById('dia-pedido').value;
     const selectHorario = document.getElementById('horario-pedido');
@@ -71,16 +117,26 @@ function atualizarHorariosDisponiveis() {
     const dataEscolhida = new Date(dateInput + 'T00:00:00');
     const diaDaSemana = dataEscolhida.getDay(); 
     
-    // Lógica de fechamento (Seg-Sex até 18:30 | Sáb até 17:30)
     let limiteHora = 18;
     let limiteMinuto = 30;
-    if (diaDaSemana === 6) { // Sábado
-        limiteHora = 17;
-    }
+    if (diaDaSemana === 6) limiteHora = 17; 
+
+    const agora = new Date();
+    const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+    const isHoje = (dateInput === hojeStr);
+    const minutosAtuais = (agora.getHours() * 60) + agora.getMinutes();
+
+    let adicionouOpcoes = false;
 
     for (let h = 9; h <= limiteHora; h++) {
         for (let m = 0; m <= 30; m += 30) {
             if (h === limiteHora && m > limiteMinuto) continue;
+            
+            const minutosOpcao = (h * 60) + m;
+
+            if (isHoje && minutosOpcao <= (minutosAtuais + 40)) {
+                continue;
+            }
             
             const horaStr = h.toString().padStart(2, '0');
             const minStr = m.toString().padStart(2, '0');
@@ -90,11 +146,15 @@ function atualizarHorariosDisponiveis() {
             option.value = timeString;
             option.textContent = timeString;
             selectHorario.appendChild(option);
+            adicionouOpcoes = true;
         }
     }
-}
 
-// --- FIM DO SISTEMA INTELIGENTE DE HORÁRIOS ---
+    if (!adicionouOpcoes) {
+        selectHorario.innerHTML = '<option value="" disabled selected>Nenhum horário disponível para hoje.</option>';
+        selectHorario.disabled = true;
+    }
+}
 
 function checarHorarioFuncionamento() {
     const agora = new Date();
@@ -106,20 +166,16 @@ function checarHorarioFuncionamento() {
     let aberto = false;
 
     if (dia >= 1 && dia <= 5) {
-        if (minutosAtuais >= 540 && minutosAtuais < 1140) {
-            aberto = true;
-        }
+        if (minutosAtuais >= 540 && minutosAtuais < 1140) aberto = true;
     } 
     else if (dia === 6) {
-        if (minutosAtuais >= 540 && minutosAtuais < 1080) {
-            aberto = true;
-        }
+        if (minutosAtuais >= 540 && minutosAtuais < 1080) aberto = true;
     }
 
-    // --- LÓGICA DE INTERVENÇÃO MANUAL DA PLANILHA ---
     if (statusForcado === 'ABERTO') aberto = true;
     if (statusForcado === 'FECHADO') aberto = false;
-    // ------------------------------------------------
+
+    isLojaAberta = aberto;
 
     const spanStatus = document.getElementById('status-loja');
     if (aberto) {
@@ -173,12 +229,10 @@ async function carregarCardapio() {
                 const img = colunas[4] ? colunas[4].trim() : ''; 
                 const observacao = colunas[5] ? colunas[5].trim() : '';
                 
-                // --- NOVA LÓGICA DE CONTROLE DA LOJA ---
                 if (categoria === 'CONFIGURACAO' || categoria === 'CONFIGURAÇÃO') {
-                    statusForcado = statusUnidade; // Recebe ABERTO, FECHADO ou NORMAL da Katia
-                    return; // Interrompe aqui para não desenhar o card na tela
+                    statusForcado = statusUnidade; 
+                    return; 
                 }
-                // ---------------------------------------
 
                 if (isNaN(preco)) return;
 
@@ -243,7 +297,6 @@ async function carregarCardapio() {
         document.getElementById('loading-spinner').classList.add('hidden');
         document.getElementById('conteudo-cardapio').classList.remove('hidden');
 
-        // Atualiza a etiqueta imediatamente com a ordem que veio da planilha
         checarHorarioFuncionamento();
 
     } catch (erro) {
@@ -255,8 +308,6 @@ async function carregarCardapio() {
 function gerarCardHTML(nome, preco, categoria, imgUrl, isDisponivel, nomeSafe, catSafe, observacao = '') {
     const opacidade = isDisponivel ? "" : "opacity-60 grayscale-[50%]";
     const selo = isDisponivel ? "" : `<div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md">ESGOTADO</div>`;
-    
-    // Cria o HTML da observação se ela existir
     const obsHTML = observacao ? `<p class="text-[11px] text-slate-500 mt-1 leading-tight line-clamp-2">${observacao}</p>` : '';
     
     const botoes = isDisponivel ? `
@@ -271,6 +322,10 @@ function gerarCardHTML(nome, preco, categoria, imgUrl, isDisponivel, nomeSafe, c
 }
 
 function abrirModalMisto(nomeCodificado, preco) { 
+    if (!isLojaAberta) {
+        mostrarToast("Poxa, nossa cozinha está fechada no momento! 🍳 Fique à vontade para olhar o cardápio e ficar com água na boca, mas voltamos a receber pedidos assim que abrirmos. Te esperamos! ✨", "danger");
+        return;
+    }
     centoMistoAtualNome = decodeURIComponent(nomeCodificado);
     centoMistoAtualPreco = preco;
     document.getElementById('titulo-modal-misto').innerText = centoMistoAtualNome;
@@ -329,13 +384,18 @@ function adicionarMistoAoCarrinho() {
 }
 
 function adicionarItemPorChave(chaveCodificada, preco = 0, catCodificada = '') {
+    if (!isLojaAberta) {
+        mostrarToast("Poxa, nossa cozinha está fechada no momento! 🍳 Fique à vontade para olhar o cardápio e ficar com água na boca, mas voltamos a receber pedidos assim que abrirmos. Te esperamos! ✨", "danger");
+        return;
+    }
+
     const chave = decodeURIComponent(chaveCodificada);
     const categoria = decodeURIComponent(catCodificada) || 'OUTROS';
     const ex = carrinho.find(i => i.chave === chave); 
     if (ex) { 
         ex.quantidade += 1; 
     } else { 
-        carrinho.push({ chave: chave, nome: chave, preco: preco, quantidade: 1, categoria: categoria, subItens: null }); 
+        carrinho.push({ chave: chave, nome: chave, preco: preco, grandmother: 1, quantidade: 1, categoria: categoria, subItens: null }); 
     } 
     atualizarCarrinhoVisual(); 
 }
@@ -379,6 +439,7 @@ function atualizarCarrinhoVisual() {
         total += (i.preco * i.quantidade); 
         qtd += i.quantidade; 
         
+        const displayName = i.nome.split('|')[0];
         const chaveSafe = encodeURIComponent(i.chave);
         const catSafe = encodeURIComponent(i.categoria || 'OUTROS');
         
@@ -387,7 +448,7 @@ function atualizarCarrinhoVisual() {
         div.innerHTML += `
         <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center">
             <div class="w-2/3 pr-2">
-                <p class="font-semibold text-sm text-slate-800 leading-tight">${i.nome}</p>
+                <p class="font-semibold text-sm text-slate-800 leading-tight">${displayName}</p>
                 ${subHTML}
                 <p class="text-red-600 font-bold mt-2">R$ ${(i.preco * i.quantidade).toFixed(2).replace('.', ',')}</p>
             </div>
@@ -409,7 +470,16 @@ function atualizarCarrinhoVisual() {
 }
 
 function toggleCarrinho() { document.getElementById('modal-carrinho').classList.toggle('hidden'); }
-function irParaCheckout() { document.getElementById('step-carrinho').classList.add('hidden'); document.getElementById('step-checkout').classList.remove('hidden'); }
+
+function irParaCheckout() { 
+    if (!isLojaAberta) {
+        mostrarToast("Puxa vida, nossa loja acabou de fechar! 🥺 Não vamos conseguir preparar o seu pedido agora, mas volta amanhã que faremos tudo com muito capricho para você!", "danger");
+        return;
+    }
+    document.getElementById('step-carrinho').classList.add('hidden'); 
+    document.getElementById('step-checkout').classList.remove('hidden'); 
+}
+
 function voltarParaCarrinho() { document.getElementById('step-checkout').classList.add('hidden'); document.getElementById('step-carrinho').classList.remove('hidden'); }
 
 function mostrarSucesso() {
@@ -437,8 +507,14 @@ function enviarPedido() {
     const horaReq = document.getElementById('horario-pedido').value;
     const obs = document.getElementById('obs-pedido').value; 
     
-    if (!n) return alert("Por favor, informe seu nome."); 
-    if (!diaReq || !horaReq) return alert("Por favor, informe a data e o horário para retirada.");
+    if (!n) {
+        mostrarToast("Ops! Você esqueceu de nos dizer o seu nome! 🥰 Preenche ali rapidinho para a gente saber quem vai levar essas delícias?", "warning");
+        return;
+    } 
+    if (!diaReq || !horaReq) {
+        mostrarToast("Falta só um detalhezinho! 🕒 Conta pra gente o dia e o horário da retirada para deixarmos tudo quentinho e fresquinho te esperando!", "warning");
+        return;
+    }
     
     const partesData = diaReq.split('-');
     const dataRetirada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
@@ -497,33 +573,15 @@ function enviarPedido() {
 
 window.addEventListener('DOMContentLoaded', carregarCardapio);
 
-
 // ==========================================
 // 🔒 TRAVA DE SEGURANÇA (ESPANTA-CURIOSOS)
 // ==========================================
-// Desativa o clique com o botão direito do rato
 document.addEventListener('contextmenu', event => event.preventDefault());
 
-// Desativa teclas de atalho para ferramentas de programador
 document.onkeydown = function(e) {
-    // Bloqueia F12
-    if(e.key === 'F12' || e.keyCode === 123) {
-        return false;
-    }
-    // Bloqueia Ctrl+Shift+I (Inspecionar)
-    if(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
-        return false;
-    }
-    // Bloqueia Ctrl+Shift+C (Inspecionar Elemento)
-    if(e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
-        return false;
-    }
-    // Bloqueia Ctrl+Shift+J (Console)
-    if(e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
-        return false;
-    }
-    // Bloqueia Ctrl+U (Ver código-fonte)
-    if(e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
-        return false;
-    }
+    if(e.key === 'F12' || e.keyCode === 123) return false;
+    if(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) return false;
+    if(e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) return false;
+    if(e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) return false;
+    if(e.ctrlKey && (e.key === 'U' || e.key === 'u')) return false;
 };
