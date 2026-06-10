@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Caixa - Amei Salgados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* 
+           MODO DE IMPRESSÃO - ARQUITETURA PREMIUM
+           */
+        @media print {
+            .no-print { display: none !important; }
+            body { 
+                background: white; 
+                margin: 0; 
+                padding: 0; 
+                display: block;
+            }
+            @page { 
+                margin: 0; 
+                size: 58mm auto; 
+            }
+            #cupom-print {
+                display: block !important;
+                width: 58mm;
+                /* Arial é mais grossa e legível em térmica do que Courier */
+                font-family: Arial, Helvetica, sans-serif; 
+                color: #000;
+                padding: 4mm 1mm;
+                margin: 0;
+                background: white !important;
+            }
+            
+            strong {
+                font-weight: 900 !important;
+            }
+            
+            * { 
+                word-break: normal !important; 
+                overflow-wrap: break-word !important;
+                background: transparent !important;
+                color: #000 !important;
+            }
+
+            /* Divisores de Seção Profissionais */
+            .linha-tracejada-grossa {
+                border-top: 2px dashed #000;
+                margin-top: 15px; 
+            }
+            
+            .linha-tracejada-fina {
+                border-top: 1px dashed #000;
+                margin-top: 6px; 
+            }
+
+            .divisor-final {
+                border-bottom: 2px solid #000; 
+                margin: 12px 0;
+                width: 100%;
+                display: block;
+            }
+        }
+
+        @media screen {
+            #cupom-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div class="no-print bg-white max-w-md w-full p-6 sm:p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+        
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+        <div class="text-center mb-6 relative z-10">
+            <div class="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg transform -rotate-3">
+                <i class="fas fa-receipt text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Caixa Impressão
+            <p class="text-xs text-slate-500 mt-1 font-medium uppercase tracking-wider">Utilize para imprimir pedidos</p>
+        </div>
+
+        <div class="relative z-10">
+            <textarea id="texto-pedido" rows="10" 
+                class="w-full border-2 border-slate-200 rounded-2xl p-4 text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none shadow-inner" 
+                placeholder="Cole o pedido do WhatsApp aqui..."></textarea>
+            
+            <button onclick="prepararEImprimir()" 
+                class="w-full mt-4 bg-emerald-500 text-white font-bold py-5 rounded-2xl shadow-[0_8px_20px_rgba(16,185,129,0.3)] hover:bg-emerald-600 hover:-translate-y-1 transition-all duration-200 uppercase tracking-widest text-sm flex justify-center items-center gap-3">
+                <i class="fas fa-print text-lg"></i> Imprimir Cupom
+            </button>
+
+            <button onclick="limparCaixa()" 
+                class="w-full mt-3 text-slate-400 text-xs font-bold uppercase tracking-wider py-3 rounded-xl hover:text-red-500 hover:bg-red-50 transition-colors">
+                Limpar Caixa
+            </button>
+        </div>
+    </div>
+
+    <div id="cupom-print">
+        <div id="conteudo-pedido"></div>
+        <div class="divisor-final"></div>
+        <div style="text-align: center; font-size: 11px; font-weight: bold; margin-top: 4px;">A melhor de Uberlândia-MG</div>
+        <div style="height: 20mm;"></div> 
+    </div>
+
+    <script>
+        function prepararEImprimir() {
+            const textarea = document.getElementById('texto-pedido');
+            const textoOriginal = textarea.value;
+            
+            if (textoOriginal.trim() === '') {
+                alert('Oops! Cole o texto do pedido primeiro antes de imprimir.');
+                textarea.focus();
+                return;
+            }
+
+            const linhas = textoOriginal.split('\n');
+            let htmlFinal = '';
+
+            linhas.forEach(linha => {
+                let trimmed = linha.trim();
+                if (!trimmed) {
+                    htmlFinal += '<div style="height: 4px;"></div>';
+                    return;
+                }
+
+                // Geração do texto puro em caixa alta para checagem flexível
+                let textoPuroSuperior = trimmed.replace(/[\*_~:]/g, '').toUpperCase().trim();
+
+                // 1. IDENTIFICAÇÃO DE CATEGORIAS (Ficam centralizadas e tracejadas - Padrão Premium)
+                const palavrasCategoria = ['CENTO MISTO', 'SALGADO FRITO', 'SALGADO ASSADO', 'BEBITAS', 'BEBIDAS', 'COMBO', 'PROMOÇÃO', 'PROMO', 'DOCES'];
+                const ehCategoria = !linha.includes(':') && !linha.includes('* ') && !linha.includes('•') &&
+                                    palavrasCategoria.some(p => textoPuroSuperior.includes(p));
+
+                if (ehCategoria) {
+                    htmlFinal += `
+                        <div class="linha-tracejada-grossa"></div>
+                        <div style="text-align: center; font-weight: 900; font-size: 15px; margin: 8px 0; letter-spacing: 1px;">${textoPuroSuperior}</div>
+                        <div class="linha-tracejada-grossa" style="margin-bottom: 8px;"></div>`;
+                    return;
+                }
+
+                // 2. CABEÇALHO DO CUPOM
+                if (textoPuroSuperior.includes('NOVO PEDIDO PARA')) {
+                    htmlFinal += `<div style="text-align: center; font-size: 15px; font-weight: 900; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 6px;">${linha.replace(/\*/g, '').trim()}</div>`;
+                    return;
+                }
+
+                // 3. BLOCO DE TOTAL (Padrão Fast-Food)
+                if (textoPuroSuperior.startsWith('TOTAL')) {
+                    let valor = linha.split(':')[1] || '';
+                    htmlFinal += `
+                        <div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 8px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 900;">
+                            <span>TOTAL</span>
+                            <span>${valor.replace(/[\*]/g, '').trim()}</span>
+                        </div>`;
+                    return;
+                }
+
+                // 4. RESTANTE DO PEDIDO (Produtos, Sabores, etc.)
+                let linhaExibicao = linha.replace(/\*/g, ''); // Arranca asteriscos para impressão limpa
+                
+                // 🔥 A REGRA PERFEITA DO MODELO ANTERIOR: 
+                // Verifica se a linha original tem asterisco (é um produto listado) E se contém "100 salgados", "promoção" ou "cento"
+                const isProduto = linha.trim().startsWith('*');
+                const isCentoOuPromo = textoPuroSuperior.includes('100 SALGADOS') || textoPuroSuperior.includes('PROMO') || textoPuroSuperior.includes('CENTO');
+
+                if (isProduto && isCentoOuPromo) {
+                    // Destaque forte e negrito EXCLUSIVO para as quantidades de centos/combos
+                    htmlFinal += `<div style="white-space: pre-wrap; font-size: 15px; font-weight: 900; margin-top: 6px; line-height: 1.4; min-height: 1.2em; padding-left: 10px; border-left: 3px solid #000;">${linhaExibicao}</div>`;
+                } else {
+                    // Os salgados unitários e todo o resto do pedido ficam com a fonte normal e leve
+                    htmlFinal += `<div style="white-space: pre-wrap; font-size: 14px; line-height: 1.4; min-height: 1.2em;">${linhaExibicao}</div>`;
+                }
+            });
+
+            document.getElementById('conteudo-pedido').innerHTML = htmlFinal;
+            window.print();
+        }
+
+        function limparCaixa() {
+            const textarea = document.getElementById('texto-pedido');
+            textarea.value = '';
+            textarea.focus();
+        }
+    </script>
+</body>
+</html>
